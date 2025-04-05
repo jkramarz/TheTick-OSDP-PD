@@ -93,6 +93,7 @@ int logger_print(const char *msg)
 
 void setup()
 {
+    delay(1000);
     Serial.begin(115200);
 
     Serial.println("OSDP Peripheral Device");
@@ -119,16 +120,24 @@ void setup()
     pinMode(PIN_OSDP_TERM, OUTPUT);
     digitalWrite(PIN_OSDP_TERM, HIGH);
 
+    // This configuration at the first glance is a bit counterintuitive:
+    // - receiver is permanently enabled, as:
+    //    - it is used for collision detection
+    //    - echo is suppresed by UART hardware
+    // - hardware flow in the UART controller is DISABLED, as it doesn't support half-duplex communication
+    // - RTS signal is controlled the software UART driver
+    // - CTS signal is not used
+    // https://docs.espressif.com/projects/esp-idf/en/v5.0/esp32c3/api-reference/peripherals/uart.html#overview-of-rs485-specific-communication-options
+    
     SERIAL_PORT_HARDWARE.begin(
         115200,
         SERIAL_8N1,
         PIN_OSDP_RX,
         PIN_OSDP_TX
     );
-
     SERIAL_PORT_HARDWARE.setMode(UART_MODE_RS485_HALF_DUPLEX);
-    SERIAL_PORT_HARDWARE.setPins(PIN_OSDP_RX, PIN_OSDP_TX, PIN_OSDP_DE, PIN_OSDP_RE);
-    SERIAL_PORT_HARDWARE.setHwFlowCtrlMode(UART_HW_FLOWCTRL_CTS_RTS, 3200);
+    SERIAL_PORT_HARDWARE.setPins(PIN_OSDP_RX, PIN_OSDP_TX, -1, PIN_OSDP_DE);
+    SERIAL_PORT_HARDWARE.setHwFlowCtrlMode(UART_HW_FLOWCTRL_DISABLE, 122);
 
     Serial.println("Starting OSDP Peripheral Device");
 
